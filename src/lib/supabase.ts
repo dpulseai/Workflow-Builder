@@ -61,15 +61,33 @@ export const storageOperations = {
 // Database types
 export interface Work {
   id: string;
-  title: string;
-  description: string;
-  assigned_to: string;
-  role: 'admin' | 'clerk' | 'officer' | 'developer';
-  status: 'pending' | 'in_progress' | 'completed';
+  taluka: string;
+  year: string;
+  work_name: string;
+  department: string;
+
+  admin_approval_no: string;
+  admin_approval_date: string;
+  admin_approval_amount: string;
+
+  tech_approval_no: string;
+  tech_approval_date: string;
+  tech_approval_amount: string;
+
+  agreement_approval_no: string;
+  agreement_approval_date: string;
+  agreement_approval_amount: string;
+
+  duration: string;
+  contractor_name: string;
   priority: 'low' | 'medium' | 'high';
+  current_status: 'pending' | 'in_progress' | 'completed';
+  delay: string;
+  expected_completion: string;
+  note: string;
+
   created_at: string;
   updated_at: string;
-  due_date: string;
 }
 
 export interface Workflow {
@@ -139,7 +157,7 @@ export const workOperations = {
     // First, get the work details to match workflows by title
     const { data: work, error: workError } = await supabase
       .from('works')
-      .select('title')
+      .select('work_name')
       .eq('id', id)
       .single();
     
@@ -149,7 +167,7 @@ export const workOperations = {
     const { data: workflows, error: workflowError } = await supabase
       .from('workflows')
       .select('id')
-      .ilike('title', `%${work.title}%`);
+      .ilike('title', `%${work.work_name}%`);
     
     if (workflowError) throw workflowError;
     
@@ -193,17 +211,15 @@ export const workOperations = {
     
     if (workError) throw workError;
     
-    // Create duplicate work
+    // Clone work (remove id + created_at, rename work_name)
     const duplicateWorkData = {
-      title: `${originalWork.title} (Copy)`,
-      description: originalWork.description,
-      assigned_to: originalWork.assigned_to,
-      role: originalWork.role,
-      status: 'pending' as const,
-      priority: originalWork.priority,
-      due_date: originalWork.due_date,
+      ...originalWork,
+      work_name: `${originalWork.work_name} (Copy)`,
     };
-    
+    delete (duplicateWorkData as any).id;
+    delete (duplicateWorkData as any).created_at;
+
+    // Insert duplicate work
     const { data: newWork, error: createError } = await supabase
       .from('works')
       .insert([duplicateWorkData])
@@ -219,7 +235,7 @@ export const workOperations = {
         *,
         workflow_steps (*)
       `)
-      .ilike('title', `%${originalWork.title}%`);
+      .ilike('title', `%${originalWork.work_name}%`);
     
     if (workflowError) throw workflowError;
     
@@ -228,8 +244,8 @@ export const workOperations = {
       for (const workflow of workflows) {
         // Create duplicate workflow
         const duplicateWorkflowData = {
-          title: `Workflow for: ${newWork.title}`,
-          description: `Workflow created for work: ${newWork.description}`,
+          title: `Workflow for: ${newWork.work_name}`,
+          description: workflow.description ?? '',
           duration: workflow.duration,
           status: 'draft' as const,
         };
