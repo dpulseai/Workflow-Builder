@@ -1,24 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Eye, Calendar, User, Flag, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Copy, Clock, CheckCircle, Layers } from 'lucide-react';
 import { workOperations, Work } from '../lib/supabase';
+import toast, { Toaster } from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const [works, setWorks] = useState<Work[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingWork, setEditingWork] = useState<Work | null>(null);
+  const [viewingWork, setViewingWork] = useState<Work | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    assigned_to: '',
-    role: 'clerk' as const,
-    status: 'pending' as const,
-    priority: 'medium' as const,
-    due_date: '',
+    taluka: '',
+    year: '',
+    work_name: '',
+    department: '',
+    admin_approval_no: '',
+    admin_approval_date: '',
+    admin_approval_amount: '',
+    tech_approval_no: '',
+    tech_approval_date: '',
+    tech_approval_amount: '',
+    agreement_approval_no: '',
+    agreement_approval_date: '',
+    agreement_approval_amount: '',
+    duration: '',
+    contractor_name: '',
+    priority: '',
+    current_status: '',
+    delay: '',
+    expected_completion: '',
+    note: '',
   });
+
+  // Status & Priority filters
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+
+  // Dynamic status card counts
+  const completedStages = works.filter(w => w.current_status === 'completed').length;
+  const inProgress = works.filter(w => w.current_status === 'in_progress').length;
+  const pending = works.filter(w => w.current_status === 'pending').length;
 
   useEffect(() => {
     loadWorks();
@@ -31,48 +54,89 @@ const Dashboard: React.FC = () => {
       setWorks(data);
     } catch (error) {
       console.error('Error loading works:', error);
+      toast.error('Error loading works');
     } finally {
       setLoading(false);
     }
   };
 
+  const validateForm = () => {
+    const requiredFields = [
+      'taluka',
+      'work_name',
+      'department',
+      'admin_approval_no',
+      'admin_approval_date',
+    ];
+    for (let field of requiredFields) {
+      if (!(formData as any)[field]) {
+        toast.error(`${t(field)} is required`);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     try {
       if (editingWork) {
         await workOperations.update(editingWork.id, formData);
+        toast.success('Work updated successfully');
       } else {
         await workOperations.create(formData);
+        toast.success('Work created successfully');
       }
       await loadWorks();
       resetForm();
     } catch (error) {
       console.error('Error saving work:', error);
+      toast.error('Error saving work');
     }
   };
 
   const handleEdit = (work: Work) => {
     setEditingWork(work);
     setFormData({
-      title: work.title,
-      description: work.description,
-      assigned_to: work.assigned_to,
-      role: work.role,
-      status: work.status,
-      priority: work.priority,
-      due_date: work.due_date.split('T')[0],
+      taluka: work.taluka || '',
+      year: work.year || '',
+      work_name: work.work_name || '',
+      department: work.department || '',
+      admin_approval_no: work.admin_approval_no || '',
+      admin_approval_date: work.admin_approval_date || '',
+      admin_approval_amount: work.admin_approval_amount || '',
+      tech_approval_no: work.tech_approval_no || '',
+      tech_approval_date: work.tech_approval_date || '',
+      tech_approval_amount: work.tech_approval_amount || '',
+      agreement_approval_no: work.agreement_approval_no || '',
+      agreement_approval_date: work.agreement_approval_date || '',
+      agreement_approval_amount: work.agreement_approval_amount || '',
+      duration: work.duration || '',
+      contractor_name: work.contractor_name || '',
+      current_status: work.current_status || '',
+      priority: work.priority || '',
+      delay: work.delay || '',
+      expected_completion: work.expected_completion || '',
+      note: work.note || '',
     });
     setShowForm(true);
   };
 
+  const handleView = (work: Work) => {
+    setViewingWork(work);
+  };
+
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this work? This will also delete all associated workflows and steps.')) {
+    if (window.confirm('Are you sure you want to delete this work?')) {
       try {
         await workOperations.delete(id);
         await loadWorks();
+        toast.success('Work deleted successfully');
       } catch (error) {
         console.error('Error deleting work:', error);
-        alert('Error deleting work. Please try again.');
+        toast.error('Error deleting work');
       }
     }
   };
@@ -81,54 +145,46 @@ const Dashboard: React.FC = () => {
     try {
       await workOperations.duplicate(id);
       await loadWorks();
-      alert('Work duplicated successfully with all workflows and steps!');
+      toast.success('Work duplicated successfully!');
     } catch (error) {
       console.error('Error duplicating work:', error);
-      alert('Error duplicating work. Please try again.');
+      toast.error('Error duplicating work');
     }
   };
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
-      assigned_to: '',
-      role: 'clerk',
-      status: 'pending',
-      priority: 'medium',
-      due_date: '',
+      taluka: '',
+      year: '',
+      work_name: '',
+      department: '',
+      admin_approval_no: '',
+      admin_approval_date: '',
+      admin_approval_amount: '',
+      tech_approval_no: '',
+      tech_approval_date: '',
+      tech_approval_amount: '',
+      agreement_approval_no: '',
+      agreement_approval_date: '',
+      agreement_approval_amount: '',
+      duration: '',
+      contractor_name: '',
+      current_status: '',
+      priority: '',
+      delay: '',
+      expected_completion: '',
+      note: '',
     });
     setEditingWork(null);
     setShowForm(false);
   };
 
-  const getRoleColor = (role: string) => {
-    const colors = {
-      admin: 'bg-gradient-to-r from-purple-500 to-pink-500',
-      clerk: 'bg-gradient-to-r from-blue-500 to-indigo-500',
-      officer: 'bg-gradient-to-r from-green-500 to-teal-500',
-      developer: 'bg-gradient-to-r from-orange-500 to-red-500',
-    };
-    return colors[role as keyof typeof colors] || colors.clerk;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: 'bg-gradient-to-r from-yellow-400 to-orange-400',
-      in_progress: 'bg-gradient-to-r from-blue-400 to-indigo-400',
-      completed: 'bg-gradient-to-r from-green-400 to-emerald-400',
-    };
-    return colors[status as keyof typeof colors] || colors.pending;
-  };
-
-  const getPriorityColor = (priority: string) => {
-    const colors = {
-      low: 'bg-gradient-to-r from-gray-400 to-gray-500',
-      medium: 'bg-gradient-to-r from-yellow-400 to-amber-400',
-      high: 'bg-gradient-to-r from-red-400 to-pink-400',
-    };
-    return colors[priority as keyof typeof colors] || colors.medium;
-  };
+  // Filter works for table display
+  const filteredWorks = works.filter((w) => {
+    const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
+    const priorityMatch = priorityFilter === 'all' || w.priority === priorityFilter;
+    return statusMatch && priorityMatch;
+  });
 
   if (loading) {
     return (
@@ -140,13 +196,51 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <Toaster position="top-right" />
+
+      {/* Cards Row */}
+      <div className="w-full flex flex-row justify-center items-center gap-8 mb-2">
+        {/* Completed, In Progress, Pending cards */}
+        <div className="flex-1 flex justify-center">
+          <div className="w-full max-w-xs bg-white/80 rounded-2xl shadow-lg p-6 flex items-center space-x-4">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+            <div>
+              <div className="text-gray-500 text-sm font-semibold">{t('completion')}</div>
+              <div className="text-2xl font-bold text-green-700 mt-1">
+                {completedStages} {t('completion')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex justify-center">
+          <div className="w-full max-w-xs bg-white/80 rounded-2xl shadow-lg p-6 flex items-center space-x-4">
+            <Clock className="w-8 h-8 text-blue-600" />
+            <div>
+              <div className="text-gray-500 text-sm font-semibold">{t('cardInProgress')}</div>
+              <div className="text-2xl font-bold text-blue-700 mt-1">
+                {inProgress} {t('inProgress')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex justify-center">
+          <div className="w-full max-w-xs bg-white/80 rounded-2xl shadow-lg p-6 flex items-center space-x-4">
+            <Layers className="w-8 h-8 text-yellow-600" />
+            <div>
+              <div className="text-gray-500 text-sm font-semibold">{t('cardPending')}</div>
+              <div className="text-2xl font-bold text-yellow-700 mt-1">
+                {pending} {t('pending')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
+      <div className="bg-white rounded-3xl shadow-xl p-6">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              {t('workManagement')}
-            </h2>
+            <h2 className="text-3xl font-bold text-emerald-600">{t('workManagement')}</h2>
             <p className="text-gray-600 mt-2">Manage and track all work assignments</p>
           </div>
           <button
@@ -159,223 +253,127 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {editingWork ? t('edit') : t('addNewWork')}
-              </h3>
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('workTitle')}
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('description')}
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('assignedTo')}
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.assigned_to}
-                      onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('role')}
-                    </label>
-                    <select
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="admin">{t('admin')}</option>
-                      <option value="clerk">{t('clerk')}</option>
-                      <option value="officer">{t('officer')}</option>
-                      <option value="developer">{t('developer')}</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('status')}
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="pending">{t('pending')}</option>
-                      <option value="in_progress">{t('inProgress')}</option>
-                      <option value="completed">{t('completed')}</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('priority')}
-                    </label>
-                    <select
-                      value={formData.priority}
-                      onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="low">{t('low')}</option>
-                      <option value="medium">{t('medium')}</option>
-                      <option value="high">{t('high')}</option>
-                    </select>
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('dueDate')}
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.due_date}
-                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="btn-secondary"
-                  >
-                    {t('cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary"
-                  >
-                    {editingWork ? t('update') : t('save')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+      {/* Filters */}
+      <div className="flex flex-row items-center gap-6 mb-4">
+        <div className="flex flex-row items-center gap-2">
+          <label className="font-medium text-gray-700">{t('Filter by Status')}:</label>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as any)}
+            className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">{t('All')}</option>
+            <option value="pending">{t('pending')}</option>
+            <option value="in_progress">{t('inProgress')}</option>
+            <option value="completed">{t('completion')}</option>
+          </select>
         </div>
-      )}
+        <div className="flex flex-row items-center gap-2">
+          <label className="font-medium text-gray-700">{t('Filter by Priority')}:</label>
+          <select
+            value={priorityFilter}
+            onChange={e => setPriorityFilter(e.target.value as any)}
+            className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">{t('All')}</option>
+            <option value="low">{t('low')}</option>
+            <option value="medium">{t('medium')}</option>
+            <option value="high">{t('high')}</option>
+          </select>
+        </div>
+      </div>
 
       {/* Works Table */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden border border-white/20">
+      <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('workTitle')}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('assignedTo')}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('role')}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('status')}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('priority')}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('dueDate')}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('actions')}
-                </th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('Sr. No')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('taluka')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('year')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('work_name')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('department')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('approval_amount')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('contractor_name')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('delay')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('note')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('priority')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('status')}</th>
+                <th className="px-4 py-4 text-left text-xs font-medium">{t('actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {works.map((work) => (
-                <tr key={work.id} className="hover:bg-gray-50/50 transition-colors duration-200">
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{work.title}</div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{work.description}</div>
-                    </div>
+              {filteredWorks.map((work, index) => (
+                <tr key={work.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 text-sm">{index + 1}</td>
+                  <td className="px-4 py-4 text-sm">{work.taluka}</td>
+                  <td className="px-4 py-4 text-sm">{work.year}</td>
+                  <td className="px-4 py-4 text-sm">{work.work_name}</td>
+                  <td className="px-4 py-4 text-sm">{work.department}</td>
+                  <td className="px-4 py-4 text-sm">{work.agreement_approval_amount}</td>
+                  <td className="px-4 py-4 text-sm">{work.contractor_name}</td>
+                  <td className="px-4 py-4 text-sm">{work.delay}</td>
+                  <td className="px-4 py-4 text-sm">{work.note}</td>
+                  <td className="px-4 py-4 text-sm">
+                    {work.priority ? (
+                      <span
+                        className={`px-4 py-1 rounded-full text-xs font-semibold ${work.priority === 'low'
+                          ? 'bg-green-100 text-green-700'
+                          : work.priority === 'medium'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                          }`}
+                      >
+                        {t(work.priority)}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <User className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">{work.assigned_to}</span>
-                    </div>
+                  <td className="px-4 py-4 text-sm">
+                    {work.current_status ? (
+                      <span
+                        className={`px-4 py-1 rounded-full text-xs font-semibold ${work.current_status === 'pending'
+                          ? 'bg-gray-100 text-gray-700'
+                          : work.current_status === 'in_progress'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
+                          }`}
+                      >
+                        {t(work.current_status)}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getRoleColor(work.role)}`}>
-                      {t(work.role)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(work.status)}`}>
-                      {t(work.status.replace('_', ''))}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getPriorityColor(work.priority)}`}>
-                      <Flag className="w-3 h-3 mr-1" />
-                      {t(work.priority)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                      {new Date(work.due_date).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
+                  <td className="px-2 py-4">
                     <div className="flex items-center space-x-2">
                       <button
+                        onClick={() => handleView(work)}
+                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                        title="View work"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleEdit(work)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                         title="Edit work"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDuplicate(work.id)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200"
-                        title="Duplicate work with all workflows and steps"
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                        title="Duplicate work"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(work.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                        title="Delete work and all associated workflows"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        title="Delete work"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -386,14 +384,120 @@ const Dashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
-        {works.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-lg mb-2">No works found</div>
-            <p className="text-gray-500">Create your first work to get started</p>
-          </div>
+        {filteredWorks.length === 0 && (
+          <div className="text-center py-12 text-gray-500">No works found</div>
         )}
       </div>
+
+      {/* Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-2xl font-bold mb-6 text-blue-600">
+                {editingWork ? t('edit') : t('addNewWork')}
+              </h3>
+              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Object.keys(formData).map((field) => {
+                  const isRequired = [
+                    'taluka',
+                    'work_name',
+                    'department',
+                    'admin_approval_no',
+                    'admin_approval_date',
+                  ].includes(field);
+                  if (field === 'priority' || field === 'current_status') {
+                    return (
+                      <div key={field}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {t(field)} {isRequired && <span className="text-red-500">*</span>}
+                        </label>
+                        <select
+                          required={isRequired}
+                          value={(formData as any)[field]}
+                          onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">{t('selectOption')}</option>
+                          {field === 'priority' && (
+                            <>
+                              <option value="low">{t('low')}</option>
+                              <option value="medium">{t('medium')}</option>
+                              <option value="high">{t('high')}</option>
+                            </>
+                          )}
+                          {field === 'current_status' && (
+                            <>
+                              <option value="pending">{t('pending')}</option>
+                              <option value="in_progress">{t('in_progress')}</option>
+                              <option value="completed">{t('completed')}</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={field}>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t(field)} {isRequired && <span className="text-red-500">*</span>}
+                      </label>
+                      <input
+                        type={
+                          field.includes('date') || field === 'expected_completion'
+                            ? 'date'
+                            : field.includes('amount')
+                              ? 'number'
+                              : 'text'
+                        }
+                        required={isRequired}
+                        value={(formData as any)[field]}
+                        onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  );
+                })}
+                <div className="md:col-span-2 flex justify-end space-x-4 pt-6 border-t">
+                  <button type="button" onClick={resetForm} className="btn-secondary">
+                    {t('cancel')}
+                  </button>
+                  <button type="submit" className="btn-primary">
+                    {editingWork ? t('update') : t('save')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Modal */}
+      {viewingWork && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-y-auto p-6">
+            <h3 className="text-2xl font-bold mb-6 text-emerald-600">{t('view')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Object.keys(formData).map((field) => (
+                <div key={field}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t(field)}</label>
+                  <div className="px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-700">
+                    {String((viewingWork as any)[field] || '-')}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setViewingWork(null)}
+                className="btn-secondary"
+              >
+                {t('close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
