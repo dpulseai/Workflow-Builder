@@ -11,35 +11,67 @@ const resources = {
       language: 'Language',
       english: 'English',
       marathi: 'मराठी',
-      
+
       // Dashboard
       workManagement: 'Work Management',
       addNewWork: 'Add New Work',
-      workTitle: 'Work Title',
-      description: 'Description',
-      assignedTo: 'Assigned To',
-      role: 'Role',
-      status: 'Status',
-      priority: 'Priority',
-      dueDate: 'Due Date',
-      actions: 'Actions',
-      
+      serial_no: 'Serial No',
+      taluka: 'Taluka',
+      year: 'Year',
+      work_name: 'Work Name',
+      department: 'Department',
+      approval_amount : 'Approval Amount',
+
+      admin_approval_no: 'Admin Approval No',
+      admin_approval_date: 'Admin Approval Date',
+      admin_approval_amount: 'Admin Approval Amount',
+
+      tech_approval_no: 'Tech Approval No',
+      tech_approval_date: 'Tech Approval Date',
+      tech_approval_amount: 'Tech Approval Amount',
+
+      agreement_approval_no: 'Agreement Approval No',
+      agreement_approval_date: 'Agreement Approval Date',
+      agreement_approval_amount: 'Agreement Approval Amount',
+
+      duration: 'Duration',
+      contractor_name: 'Contractor Name',
+      current_status: 'Current Status',
+      delay: 'Delay',
+      expected_completion: 'Expected Completion Date',
+      note: 'Note',
+
+      priority: "Priority",
+      selectOption: "Select an option",
+      low: "Low",
+      medium: "Medium",
+      high: "High",
+      pending: "Pending",
+      in_progress: "In Progress",
+      completed: "Completed",
+      // workTitle: 'Work Title',
+      // description: 'Description',
+      // assignedTo: 'Assigned To',
+      // role: 'Role',
+      // status: 'Status',
+      // priority: 'Priority',
+      // dueDate: 'Due Date',
+      // actions: 'Actions',
+
+      //cards
+      completion: 'Completion',
+      activeStages: 'ACTIVE STAGES',
+      days: "days",
+      cardInProgress: "In Progress",
+      cardPending: "Pending",
+
       // Roles
       admin: 'Admin',
       clerk: 'Clerk',
       officer: 'Officer',
       developer: 'Developer',
-      
-      // Status
-      pending: 'Pending',
-      inProgress: 'In Progress',
-      completed: 'Completed',
-      
-      // Priority
-      low: 'Low',
-      medium: 'Medium',
-      high: 'High',
-      
+
+
       // Workflow
       createWorkflow: 'Create New Workflow',
       selectWork: 'Select Work',
@@ -49,7 +81,7 @@ const resources = {
       activateWorkflow: 'Activate Workflow',
       workflowActivated: 'Workflow Activated Successfully',
       workflowTitle: 'Workflow Title',
-      duration: 'Duration (days)',
+      workDuration: 'Duration (days)',
       addStep: 'Add Step',
       stepTitle: 'Step Title',
       stepDuration: 'Duration (hours)',
@@ -57,7 +89,7 @@ const resources = {
       uploadPhoto: 'Upload Photo',
       captureLocation: 'Capture Location',
       completeStep: 'Complete Step',
-      
+
       // Buttons
       save: 'Save',
       cancel: 'Cancel',
@@ -66,7 +98,7 @@ const resources = {
       view: 'View',
       create: 'Create',
       update: 'Update',
-      
+
       // Messages
       workCreated: 'Work created successfully',
       workUpdated: 'Work updated successfully',
@@ -87,35 +119,69 @@ const resources = {
       language: 'भाषा',
       english: 'English',
       marathi: 'मराठी',
-      
+
       // Dashboard
       workManagement: 'कार्य व्यवस्थापन',
       addNewWork: 'नवीन कार्य जोडा',
-      workTitle: 'कार्याचे शीर्षक',
-      description: 'वर्णन',
-      assignedTo: 'नियुक्त केले',
-      role: 'भूमिका',
-      status: 'स्थिती',
-      priority: 'प्राधान्य',
-      dueDate: 'अंतिम तारीख',
-      actions: 'क्रिया',
-      
+
+      serial_no: 'अनुक्रमांक',
+      taluka: 'तालुका',
+      year: 'वर्ष',
+      work_name: 'कामाचे नाव',
+      department: 'विभाग',
+      approval_amount : 'मंजुरी रक्कम',
+
+      admin_approval_no: 'प्रशासनिक मंजुरी क्रमांक',
+      admin_approval_date: 'प्रशासनिक मंजुरी दिनांक',
+      admin_approval_amount: 'प्रशासनिक मंजुरी रक्कम',
+
+      tech_approval_no: 'तांत्रिक मंजुरी क्रमांक',
+      tech_approval_date: 'तांत्रिक मंजुरी दिनांक',
+      tech_approval_amount: 'तांत्रिक मंजुरी रक्कम',
+
+      agreement_approval_no: 'करार मंजुरी क्रमांक',
+      agreement_approval_date: 'करार मंजुरी दिनांक',
+      agreement_approval_amount: 'करार मंजुरी रक्कम',
+
+      workDuration: 'कालावधी',
+      contractor_name: 'कंत्राटदाराचे नाव',
+      current_status: 'सध्याची स्थिती',
+      delay: 'उशीर',
+      expected_completion: 'अपेक्षित पूर्णता दिनांक',
+      note: 'नोंद',
+
+      priority: "प्राधान्य",
+      selectOption: "पर्याय निवडा",
+      low: "कमी",
+      medium: "मध्यम",
+      high: "जास्त",
+      pending: "प्रलंबित",
+      in_progress: "सुरू आहे",
+      completed: "पूर्ण",
+
+      // workTitle: 'कार्याचे शीर्षक',
+      // description: 'वर्णन',
+      // assignedTo: 'नियुक्त केले',
+      // role: 'भूमिका',
+      // status: 'स्थिती',
+      // priority: 'प्राधान्य',
+      // dueDate: 'अंतिम तारीख',
+      // actions: 'क्रिया',
+
+      //cards
+      completion: 'पूर्णत्व',
+      activeStages: 'सद्यस्थिती टप्पे',
+      days: "दिवस",
+      inProgress: "प्रगतीमध्ये",
+      cardPending: "प्रलंबित",
+
       // Roles
       admin: 'प्रशासक',
       clerk: 'लिपिक',
       officer: 'अधिकारी',
       developer: 'विकासक',
-      
-      // Status
-      pending: 'प्रलंबित',
-      inProgress: 'प्रगतीत',
-      completed: 'पूर्ण',
-      
-      // Priority
-      low: 'कमी',
-      medium: 'मध्यम',
-      high: 'उच्च',
-      
+
+
       // Workflow
       createWorkflow: 'नवीन वर्कफ्लो तयार करा',
       selectWork: 'कार्य निवडा',
@@ -133,7 +199,7 @@ const resources = {
       uploadPhoto: 'फोटो अपलोड करा',
       captureLocation: 'स्थान कॅप्चर करा',
       completeStep: 'पायरी पूर्ण करा',
-      
+
       // Buttons
       save: 'जतन करा',
       cancel: 'रद्द करा',
@@ -142,7 +208,7 @@ const resources = {
       view: 'पहा',
       create: 'तयार करा',
       update: 'अद्यतनित करा',
-      
+
       // Messages
       workCreated: 'कार्य यशस्वीरित्या तयार केले',
       workUpdated: 'कार्य यशस्वीरित्या अद्यतनित केले',
