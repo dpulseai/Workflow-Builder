@@ -16,6 +16,8 @@ const WorkflowBuilder: React.FC = () => {
   }>>([]);
   const [showStepForm, setShowStepForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Store steps separately for each work by work ID
+  const [worksSteps, setWorksSteps] = useState<{ [workId: string]: Array<{ title: string; description: string; duration: number; order: number }> }>({});
 
   const [stepForm, setStepForm] = useState({
     title: '',
@@ -31,8 +33,8 @@ const WorkflowBuilder: React.FC = () => {
     try {
       setLoading(true);
       const data = await workOperations.getAll();
-      // Filter works that can have workflows (max 2 workflows per work)
-      setWorks(data.filter(work => work.status !== 'completed'));
+      // Filter works that can have workflows
+      setWorks(data.filter(work => work.current_status !== 'completed'));
     } catch (error) {
       console.error('Error loading works:', error);
     } finally {
@@ -42,7 +44,7 @@ const WorkflowBuilder: React.FC = () => {
 
   const handleSelectWork = (work: Work) => {
     setSelectedWork(work);
-    setSteps([]);
+    setSteps(worksSteps[work.id] || []);
   };
 
   const handleAddStep = (e: React.FormEvent) => {
@@ -51,16 +53,23 @@ const WorkflowBuilder: React.FC = () => {
       ...stepForm,
       order: steps.length,
     };
-    setSteps([...steps, newStep]);
+    const updatedSteps = [...steps, newStep];
+    setSteps(updatedSteps);
+    if (selectedWork) {
+      setWorksSteps((prev) => ({ ...prev, [selectedWork.id]: updatedSteps }));
+    }
     setStepForm({ title: '', description: '', duration: 1 });
     setShowStepForm(false);
   };
 
   const handleRemoveStep = (index: number) => {
-    const updatedSteps = steps.filter((_, i) => i !== index);
-    // Reorder remaining steps
-    const reorderedSteps = updatedSteps.map((step, i) => ({ ...step, order: i }));
-    setSteps(reorderedSteps);
+    const updatedSteps = steps
+      .filter((_, i) => i !== index)
+      .map((step, i) => ({ ...step, order: i }));
+    setSteps(updatedSteps);
+    if (selectedWork) {
+      setWorksSteps((prev) => ({ ...prev, [selectedWork.id]: updatedSteps }));
+    }
   };
 
   const handleActivateWorkflow = async () => {
@@ -69,8 +78,8 @@ const WorkflowBuilder: React.FC = () => {
     try {
       // Create workflow
       const workflow = await workflowOperations.create({
-        title: `Workflow for: ${selectedWork.title}`,
-        description: `Workflow created for work: ${selectedWork.description}`,
+        title: `Workflow for: ${selectedWork.work_name ?? ''}`,
+        description: `Workflow created for work: ${selectedWork.work_name ?? ''}`,
         duration: Math.ceil(steps.reduce((total, step) => total + step.duration, 0) / 24), // Convert hours to days
         status: 'active',
       });
@@ -91,7 +100,7 @@ const WorkflowBuilder: React.FC = () => {
       }
 
       // Update work status to in_progress
-      await workOperations.update(selectedWork.id, { status: 'in_progress' });
+      await workOperations.update(selectedWork.id, { current_status: 'in_progress' });
 
       alert(t('workflowActivated'));
       setSelectedWork(null);
@@ -109,7 +118,7 @@ const WorkflowBuilder: React.FC = () => {
       officer: 'bg-gradient-to-r from-green-500 to-teal-500',
       developer: 'bg-gradient-to-r from-orange-500 to-red-500',
     };
-    return colors[role as keyof typeof colors] || colors.clerk;
+    return colors[(role as keyof typeof colors)] || colors.clerk;
   };
 
   const getStatusColor = (status: string) => {
@@ -118,7 +127,7 @@ const WorkflowBuilder: React.FC = () => {
       in_progress: 'bg-gradient-to-r from-blue-400 to-indigo-400',
       completed: 'bg-gradient-to-r from-green-400 to-emerald-400',
     };
-    return colors[status as keyof typeof colors] || colors.pending;
+    return colors[(status as keyof typeof colors)] || colors.pending;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -127,13 +136,13 @@ const WorkflowBuilder: React.FC = () => {
       medium: 'bg-gradient-to-r from-yellow-400 to-amber-400',
       high: 'bg-gradient-to-r from-red-400 to-pink-400',
     };
-    return colors[priority as keyof typeof colors] || colors.medium;
+    return colors[(priority as keyof typeof colors)] || colors.medium;
   };
 
   const filteredWorks = works.filter(work =>
-    work.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    work.assigned_to.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    work.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (work.work_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (work.contractor_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (work.note ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -167,7 +176,7 @@ const WorkflowBuilder: React.FC = () => {
           <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             {t('selectWork')}
           </h3>
-          
+
           {/* Search Bar */}
           <div className="mb-4">
             <input
@@ -178,11 +187,11 @@ const WorkflowBuilder: React.FC = () => {
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
             />
           </div>
-          
+
           {selectedWork ? (
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-3 border-2 border-emerald-200 mb-4">
               <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-emerald-900 text-sm">{selectedWork.title}</h4>
+                <h4 className="font-bold text-emerald-900 text-sm">{selectedWork.work_name}</h4>
                 <button
                   onClick={() => setSelectedWork(null)}
                   className="text-emerald-600 hover:text-emerald-800 text-xs"
@@ -190,25 +199,42 @@ const WorkflowBuilder: React.FC = () => {
                   Change
                 </button>
               </div>
-              <p className="text-emerald-700 text-xs mb-2 line-clamp-2">{selectedWork.description}</p>
+              <p className="text-emerald-700 text-xs mb-2 line-clamp-2">{selectedWork.note}</p>
               <div className="flex flex-wrap gap-2">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleColor(selectedWork.role)}`}>
-                  {t(selectedWork.role)}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleColor(selectedWork.department ?? '')}`}>
+                  {t(selectedWork.department ?? '')}
                 </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getStatusColor(selectedWork.status)}`}>
-                  {t(selectedWork.status.replace('_', ''))}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getStatusColor(selectedWork.current_status ?? 'pending')}`}>
+                  {t((selectedWork.current_status ?? 'pending').replace('_', ''))}
                 </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getPriorityColor(selectedWork.priority)}`}>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getPriorityColor(selectedWork.priority ?? 'medium')}`}>
                   <Flag className="w-2 h-2 mr-1" />
-                  {t(selectedWork.priority)}
+                  {t(selectedWork.priority ?? 'medium')}
                 </span>
               </div>
               <div className="flex items-center mt-2 text-xs text-emerald-600">
                 <User className="w-3 h-3 mr-1" />
-                {selectedWork.assigned_to}
+                {selectedWork.contractor_name || '-'}
+
                 <Calendar className="w-3 h-3 ml-3 mr-1" />
-                {new Date(selectedWork.due_date).toLocaleDateString()}
+                {selectedWork.expected_completion
+                  ? new Date(selectedWork.expected_completion).toLocaleDateString()
+                  : '-'}
+
+                {(() => {
+                  const totalHours = (worksSteps[selectedWork.id] || []).reduce(
+                    (sum, step) => sum + step.duration,
+                    0
+                  );
+                  const totalDays = Math.ceil(totalHours / 8); 
+                  return (
+                    <span className="ml-3">
+                      {totalHours} hrs (~{totalDays} days)
+                    </span>
+                  );
+                })()}
               </div>
+
             </div>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -219,27 +245,29 @@ const WorkflowBuilder: React.FC = () => {
                   className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:from-emerald-50 hover:to-teal-50 hover:border-emerald-200 cursor-pointer transition-all duration-200"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900 text-sm truncate flex-1 mr-2">{work.title}</h4>
+                    <h4 className="font-medium text-gray-900 text-sm truncate flex-1 mr-2">
+                      {work.work_name}
+                    </h4>
                     <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
                   </div>
-                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{work.description}</p>
+                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{work.note}</p>
                   <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleColor(work.role)}`}>
-                      {t(work.role)}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleColor(work.department ?? '')}`}>
+                      {t(work.department ?? '')}
                     </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getPriorityColor(work.priority)}`}>
-                      {t(work.priority)}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getPriorityColor(work.priority ?? 'medium')}`}>
+                      {t(work.priority ?? 'medium')}
                     </span>
                   </div>
                 </div>
               ))}
-              
+
               {filteredWorks.length === 0 && works.length > 0 && (
                 <div className="text-center py-6 text-gray-500">
                   <p className="text-sm">No works match your search</p>
                 </div>
               )}
-              
+
               {works.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">No available works found</p>
@@ -319,7 +347,7 @@ const WorkflowBuilder: React.FC = () => {
                     <span>Total Steps: {steps.length}</span>
                     <span>Total Duration: {steps.reduce((total, step) => total + step.duration, 0)} hours</span>
                     <span>Estimated Days: {Math.ceil(steps.reduce((total, step) => total + step.duration, 0) / 8)}</span>
-                    <span>Work: {selectedWork.title}</span>
+                    <span>Work: {selectedWork.work_name}</span>
                   </div>
                   <button
                     onClick={handleActivateWorkflow}
@@ -343,7 +371,7 @@ const WorkflowBuilder: React.FC = () => {
               <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 {t('addStep')}
               </h3>
-              
+
               <form onSubmit={handleAddStep} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -357,7 +385,7 @@ const WorkflowBuilder: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('description')}
@@ -370,7 +398,7 @@ const WorkflowBuilder: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('stepDuration')}
@@ -379,12 +407,12 @@ const WorkflowBuilder: React.FC = () => {
                     type="number"
                     min="1"
                     value={stepForm.duration}
-                    onChange={(e) => setStepForm({ ...stepForm, duration: parseInt(e.target.value) })}
+                    onChange={(e) => setStepForm({ ...stepForm, duration: parseInt(e.target.value || '1', 10) })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                     required
                   />
                 </div>
-                
+
                 <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                   <button
                     type="button"
